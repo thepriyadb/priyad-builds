@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRIVER HUD - SUSPENSION CONTROL</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: radial-gradient(ellipse at center, #0a0e1a 0%, #000000 100%);
+            color: #4ade80;
+            overflow: hidden;
+            height: 100vh;
+            position: relative;
+        }
+        
+        /* Holographic grid overlay */
+        .hud-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(90deg, transparent 49.5%, rgba(34, 197, 94, 0.03) 50%, transparent 50.5%),
+                linear-gradient(0deg, transparent 49.5%, rgba(34, 197, 94, 0.03) 50%, transparent 50.5%);
+            background-size: 100px 100px;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        /* Scanline effect */
+        .scanline {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(to bottom, transparent, rgba(74, 222, 128, 0.5), transparent);
+            animation: scan 4s linear infinite;
+            z-index: 100;
+            pointer-events: none;
+        }
+        
+        @keyframes scan {
+            0% { transform: translateY(-100vh); }
+            100% { transform: translateY(100vh); }
+        }
+        
+        /* Main HUD container */
+        .hud-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            z-index: 2;
+        }
+        
+        /* Central Ride Height Gauge */
+        .central-gauge {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            height: 400px;
+        }
+        
+        .gauge-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 3px solid rgba(34, 197, 94, 0.3);
+            box-shadow: 
+                0 0 20px rgba(34, 197, 94, 0.3),
+                inset 0 0 20px rgba(34, 197, 94, 0.1);
+        }
+        
+        .gauge-ring-inner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 85%;
+            height: 85%;
+            border-radius: 50%;
+            border: 2px solid rgba(22, 163, 74, 0.2);
+        }
+        
+        .gauge-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        
+        .gauge-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 64px;
+            font-weight: 900;
+            color: #22c55e;
+            text-shadow: 0 0 20px rgba(34, 197, 94, 0.8);
+            line-height: 1;
+        }
+        
+        .gauge-label {
+            font-size: 14px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            opacity: 0.7;
+            margin-top: 10px;
+        }
+        
+        .gauge-target {
+            font-size: 18px;
+            color: #84cc16;
+            margin-top: 10px;
+        }
+        
+        /* Animated arc */
+        .gauge-arc {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            clip-path: polygon(50% 50%, 100% 0, 100% 100%, 0 100%, 0 0, 50% 0);
+            animation: arcRotate 3s ease-in-out infinite;
+        }
+        
+        @keyframes arcRotate {
+            0%, 100% { transform: rotate(0deg); opacity: 0.6; }
+            50% { transform: rotate(180deg); opacity: 1; }
+        }
+        
+        /* Top status bar */
+        .top-bar {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 30px;
+            background: linear-gradient(135deg, rgba(10, 14, 26, 0.7), rgba(15, 23, 42, 0.7));
+            padding: 15px 40px;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 30px;
+            box-shadow: 0 0 30px rgba(34, 197, 94, 0.2);
+            backdrop-filter: blur(10px);
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
+            letter-spacing: 2px;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 10px #22c55e;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.2); }
+        }
+        
+        /* Left panel - Comfort & Smoothness */
+        .left-panel {
+            position: absolute;
+            left: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 200px;
+            background: linear-gradient(135deg, rgba(10, 14, 26, 0.6), rgba(15, 23, 42, 0.6));
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 0 30px rgba(34, 197, 94, 0.2);
+            backdrop-filter: blur(10px);
+        }
+        
+        .panel-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 12px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #4ade80;
+        }
+        
+        .vertical-meter {
+            height: 250px;
+            width: 100%;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .meter-track {
+            width: 40px;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(34, 197, 94, 0.3);
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .meter-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 75%;
+            background: linear-gradient(to top, #16a34a, #22c55e, #4ade80);
+            border-radius: 20px;
+            animation: meterPulse 2s ease-in-out infinite;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+        }
+        
+        @keyframes meterPulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+        
+        .meter-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: #22c55e;
+            text-align: center;
+            margin-top: 15px;
+            text-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+        }
+        
+        /* Right panel - Suspension Stress */
+        .right-panel {
+            position: absolute;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 250px;
+            background: linear-gradient(135deg, rgba(10, 14, 26, 0.6), rgba(15, 23, 42, 0.6));
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 0 30px rgba(34, 197, 94, 0.2);
+            backdrop-filter: blur(10px);
+        }
+        
+        .car-outline {
+            width: 100%;
+            height: 200px;
+            position: relative;
+            margin-top: 20px;
+        }
+        
+        .car-body-outline {
+            width: 140px;
+            height: 180px;
+            margin: 0 auto;
+            border: 3px solid rgba(34, 197, 94, 0.4);
+            border-radius: 30px 30px 15px 15px;
+            position: relative;
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
+        }
+        
+        .wheel-indicator {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 3px solid;
+            animation: wheelPulse 1.5s ease-in-out infinite;
+        }
+        
+        .wheel-indicator.fl { top: 10px; left: -15px; border-color: #22c55e; box-shadow: 0 0 15px #22c55e; }
+        .wheel-indicator.fr { top: 10px; right: -15px; border-color: #22c55e; box-shadow: 0 0 15px #22c55e; }
+        .wheel-indicator.rl { bottom: 10px; left: -15px; border-color: #84cc16; box-shadow: 0 0 15px #84cc16; }
+        .wheel-indicator.rr { bottom: 10px; right: -15px; border-color: #84cc16; box-shadow: 0 0 15px #84cc16; }
+        
+        @keyframes wheelPulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+        }
+        
+        .wheel-value {
+            position: absolute;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 10px;
+            color: #4ade80;
+            white-space: nowrap;
+        }
+        
+        .wheel-value.fl { top: -20px; left: -15px; }
+        .wheel-value.fr { top: -20px; right: -15px; }
+        .wheel-value.rl { bottom: -20px; left: -15px; }
+        .wheel-value.rr { bottom: -20px; right: -15px; }
+        
+        /* Bottom telemetry strip */
+        .bottom-telemetry {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            height: 120px;
+            background: linear-gradient(135deg, rgba(10, 14, 26, 0.6), rgba(15, 23, 42, 0.6));
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 0 30px rgba(34, 197, 94, 0.2);
+            backdrop-filter: blur(10px);
+            display: flex;
+            gap: 20px;
+        }
+        
+        .telemetry-chart {
+            flex: 1;
+            position: relative;
+        }
+        
+        .chart-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 10px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            opacity: 0.7;
+        }
+        
+        .mini-chart {
+            width: 100%;
+            height: 60px;
+        }
+        
+        /* Fault alerts */
+        .fault-alert {
+            position: absolute;
+            top: 120px;
+            right: 30px;
+            background: linear-gradient(135deg, rgba(22, 163, 74, 0.3), rgba(15, 23, 42, 0.7));
+            border: 2px solid rgba(22, 163, 74, 0.6);
+            border-radius: 15px;
+            padding: 15px 20px;
+            box-shadow: 0 0 30px rgba(22, 163, 74, 0.4);
+            backdrop-filter: blur(10px);
+            animation: alertPulse 1s ease-in-out infinite;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        @keyframes alertPulse {
+            0%, 100% { box-shadow: 0 0 30px rgba(22, 163, 74, 0.4); }
+            50% { box-shadow: 0 0 50px rgba(22, 163, 74, 0.7); }
+        }
+        
+        .alert-icon {
+            width: 30px;
+            height: 30px;
+        }
+        
+        .alert-icon svg {
+            width: 100%;
+            height: 100%;
+            stroke: #16a34a;
+            fill: none;
+            stroke-width: 2;
+        }
+        
+        .alert-text {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 12px;
+            letter-spacing: 1px;
+        }
+        
+        .alert-time {
+            font-size: 10px;
+            opacity: 0.6;
+            margin-top: 3px;
+        }
+        
+        /* Predictive AI panel */
+        .ai-panel {
+            position: absolute;
+            bottom: 160px;
+            left: 30px;
+            width: 300px;
+            background: linear-gradient(135deg, rgba(10, 14, 26, 0.6), rgba(15, 23, 42, 0.6));
+            border: 1px solid rgba(5, 150, 105, 0.4);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 0 30px rgba(5, 150, 105, 0.2);
+            backdrop-filter: blur(10px);
+        }
+        
+        .ai-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 12px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            color: #059669;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .ai-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #059669;
+            animation: pulse 1s ease-in-out infinite;
+            box-shadow: 0 0 10px #059669;
+        }
+        
+        .prediction-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border-left: 3px solid #22c55e;
+        }
+        
+        .prediction-label {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .prediction-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
+            color: #22c55e;
+            font-weight: 700;
+        }
+        
+        /* Speed & dynamics */
+        .speed-panel {
+            position: absolute;
+            top: 120px;
+            left: 30px;
+            width: 180px;
+            background: linear-gradient(135deg, rgba(10, 14, 26, 0.6), rgba(15, 23, 42, 0.6));
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 0 30px rgba(34, 197, 94, 0.2);
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+        
+        .speed-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 48px;
+            font-weight: 900;
+            color: #22c55e;
+            text-shadow: 0 0 20px rgba(34, 197, 94, 0.8);
+            line-height: 1;
+        }
+        
+        .speed-unit {
+            font-size: 16px;
+            opacity: 0.6;
+            margin-left: 5px;
+        }
+        
+        .speed-label {
+            font-size: 12px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-top: 10px;
+            opacity: 0.7;
+        }
+        
+        .g-force {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(34, 197, 94, 0.2);
+        }
+        
+        .g-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 24px;
+            color: #84cc16;
+            font-weight: 700;
+        }
+        
+        /* Corner indicators */
+        .corner-indicators {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            margin-top: 15px;
+        }
+        
+        .corner-dot {
+            width: 100%;
+            height: 100%;
+            background: rgba(34, 197, 94, 0.2);
+            border: 2px solid rgba(34, 197, 94, 0.4);
+            border-radius: 5px;
+            animation: cornerPulse 2s ease-in-out infinite;
+        }
+        
+        .corner-dot.active {
+            background: rgba(34, 197, 94, 0.6);
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.8);
+        }
+        
+        @keyframes cornerPulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        
+        /* Holographic particles */
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: #22c55e;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particleFloat 10s linear infinite;
+        }
+        
+        @keyframes particleFloat {
+            0% { transform: translate(0, 0) scale(0); opacity: 0; }
+            10% { opacity: 0.5; transform: scale(1); }
+            90% { opacity: 0.5; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Holographic effects -->
+    <div class="hud-grid"></div>
+    <div class="scanline"></div>
+    
+    <!-- Particles -->
+    <div id="particles"></div>
+    
+    <div class="hud-container">
+        <!-- Top status bar -->
+        <div class="top-bar">
+            <div class="status-item">
+                <div class="status-dot"></div>
+                <span>SYSTEM ONLINE</span>
+            </div>
+            <div class="status-item">
+                <div class="status-dot" style="background: #84cc16; box-shadow: 0 0 10px #84cc16;"></div>
+                <span>ADAPTIVE</span>
+            </div>
+            <div class="status-item">
+                <div class="status-dot"></div>
+                <span>MLP ACTIVE</span>
+            </div>
+        </div>
+        
+        <!-- Central Ride Height Gauge -->
+        <div class="central-gauge">
+            <div class="gauge-ring"></div>
+            <div class="gauge-ring-inner"></div>
+            <svg class="gauge-arc" viewBox="0 0 400 400" style="position: absolute; top: 0; left: 0;">
+                <circle cx="200" cy="200" r="190" fill="none" stroke="#22c55e" stroke-width="4" 
+                        stroke-dasharray="800" stroke-dashoffset="200" opacity="0.6"
+                        style="filter: drop-shadow(0 0 10px #22c55e)"/>
+            </svg>
+            <div class="gauge-center">
+                <div class="gauge-value" id="rideHeight">98.5</div>
+                <div class="gauge-label">RIDE HEIGHT (mm)</div>
+                <div class="gauge-target">TARGET: 100.0</div>
+            </div>
+        </div>
+        
+        <!-- Left panel - Comfort -->
+        <div class="left-panel">
+            <div class="panel-title">COMFORT INDEX</div>
+            <div class="vertical-meter">
+                <div class="meter-track">
+                    <div class="meter-fill" id="comfortFill"></div>
+                </div>
+                <div class="meter-value" id="comfortValue">92%</div>
+            </div>
+        </div>
+        
+        <!-- Right panel - Suspension -->
+        <div class="right-panel">
+            <div class="panel-title">SUSPENSION STRESS</div>
+            <div class="car-outline">
+                <div class="car-body-outline">
+                    <div class="wheel-indicator fl"></div>
+                    <div class="wheel-indicator fr"></div>
+                    <div class="wheel-indicator rl"></div>
+                    <div class="wheel-indicator rr"></div>
+                    <div class="wheel-value fl">342Nm</div>
+                    <div class="wheel-value fr">358Nm</div>
+                    <div class="wheel-value rl">328Nm</div>
+                    <div class="wheel-value rr">351Nm</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Speed panel -->
+        <div class="speed-panel">
+            <div class="speed-value" id="speedValue">125<span class="speed-unit">km/h</span></div>
+            <div class="speed-label">VELOCITY</div>
+            <div class="g-force">
+                <div class="g-value" id="gForce">1.2G</div>
+                <div class="speed-label">LATERAL</div>
+            </div>
+        </div>
+        
+        <!-- Fault alert -->
+        <div class="fault-alert">
+            <div class="alert-icon">
+                <svg viewBox="0 0 24 24">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <circle cx="12" cy="17" r="0.5"/>
+                </svg>
+            </div>
+            <div>
+                <div class="alert-text">HIGH CURRENT DELTA</div>
+                <div class="alert-time">14:23:45</div>
+            </div>
+        </div>
+        
+        <!-- AI Predictive panel -->
+        <div class="ai-panel">
+            <div class="ai-title">
+                <div class="ai-indicator"></div>
+                PREDICTIVE ANALYTICS
+            </div>
+            <div class="prediction-item">
+                <span class="prediction-label">Next Height Adj</span>
+                <span class="prediction-value">+2.3mm</span>
+            </div>
+            <div class="prediction-item">
+                <span class="prediction-label">Comfort Trend</span>
+                <span class="prediction-value">↑ 4%</span>
+            </div>
+            <div class="prediction-item">
+                <span class="prediction-label">Fault Risk</span>
+                <span class="prediction-value">LOW</span>
+            </div>
+        </div>
+        
+        <!-- Bottom telemetry -->
+        <div class="bottom-telemetry">
+            <div class="telemetry-chart">
+                <div class="chart-title">PWM SIGNAL</div>
+                <canvas class="mini-chart" id="pwmChart"></canvas>
+            </div>
+            <div class="telemetry-chart">
+                <div class="chart-title">VERTICAL ACCEL</div>
+                <canvas class="mini-chart" id="accelChart"></canvas>
+            </div>
+            <div class="telemetry-chart">
+                <div class="chart-title">TORQUE OUTPUT</div>
+                <canvas class="mini-chart" id="torqueChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Create particles
+        const particlesContainer = document.getElementById('particles');
+        for (let i = 0; i < 30; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.top = Math.random() * 100 + '%';
+            particle.style.setProperty('--tx', (Math.random() - 0.5) * 200 + 'px');
+            particle.style.setProperty('--ty', (Math.random() - 0.5) * 200 + 'px');
+            particle.style.animationDelay = Math.random() * 10 + 's';
+            particlesContainer.appendChild(particle);
+        }
+        
+        // Chart configuration
+        const miniChartConfig = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { display: false },
+                y: { display: false }
+            },
+            elements: {
+                point: { radius: 0 },
+                line: { tension: 0.4 }
+            }
+        };
+        
+        // Generate data
+        const generateData = (points, min, max) => {
+            return Array.from({ length: points }, () => Math.random() * (max - min) + min);
+        };
+        
+        // PWM Chart
+        new Chart(document.getElementById('pwmChart'), {
+            type: 'line',
+            data: {
+                labels: Array.from({ length: 30 }, (_, i) => i),
+                datasets: [{
+                    data: generateData(30, 40, 80),
+                    borderColor: '#22c55e',
+                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                    borderWidth: 2,
+                    fill: true
+                }]
+            },
+            options: miniChartConfig
+        });
+        
+        // Acceleration Chart
+        new Chart(document.getElementById('accelChart'), {
+            type: 'line',
+            data: {
+                labels: Array.from({ length: 30 }, (_, i) => i),
+                datasets: [{
+                    data: generateData(30, -2, 2),
+                    borderColor: '#84cc16',
+                    backgroundColor: 'rgba(132, 204, 22, 0.1)',
+                    borderWidth: 2,
+                    fill: true
+                }]
+            },
+            options: miniChartConfig
+        });
+        
+        // Torque Chart
+        new Chart(document.getElementById('torqueChart'), {
+            type: 'line',
+            data: {
+                labels: Array.from({ length: 30 }, (_, i) => i),
+                datasets: [{
+                    data: generateData(30, 200, 400),
+                    borderColor: '#16a34a',
+                    backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                    borderWidth: 2,
+                    fill: true
+                }]
+            },
+            options: miniChartConfig
+        });
+        
+        // Animate values
+        function animateValue(element, start, end, duration, decimals = 1) {
+            const range = end - start;
+            const increment = range / (duration / 16);
+            let current = start;
+            
+            const timer = setInterval(() => {
+                current += increment;
+                if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+                    current = end;
+                    clearInterval(timer);
+                }
+                element.textContent = current.toFixed(decimals);
+            }, 16);
+        }
+        
+        // Random updates
+        setInterval(() => {
+            const rideHeight = document.getElementById('rideHeight');
+            const newHeight = 95 + Math.random() * 10;
+            animateValue(rideHeight, parseFloat(rideHeight.textContent), newHeight, 500, 1);
+            
+            const speed = document.getElementById('speedValue');
+            const newSpeed = 120 + Math.random() * 20;
+            const speedInt = Math.floor(newSpeed);
+            speed.innerHTML = speedInt + '<span class="speed-unit">km/h</span>';
+            
+            const gForce = document.getElementById('gForce');
+            const newG = 0.8 + Math.random() * 1.2;
+            gForce.textContent = newG.toFixed(1) + 'G';
+            
+            const comfort = document.getElementById('comfortValue');
+            const newComfort = 85 + Math.random() * 12;
+            comfort.textContent = Math.floor(newComfort) + '%';
+            
+            const fill = document.getElementById('comfortFill');
+            fill.style.height = newComfort + '%';
+        }, 2000);
+    </script>
+</body>
+</html>

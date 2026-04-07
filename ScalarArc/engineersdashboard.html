@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HYPERCAR SUSPENSION TELEMETRY</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: #0a0e1a;
+            color: #4ade80;
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        /* Animated background */
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(90deg, rgba(34, 197, 94, 0.02) 1px, transparent 1px),
+                linear-gradient(rgba(34, 197, 94, 0.02) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridMove 20s linear infinite;
+            z-index: 0;
+        }
+        
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+        
+        .container {
+            position: relative;
+            z-index: 2;
+            padding: 20px;
+            max-width: 1920px;
+            margin: 0 auto;
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 48px;
+            font-weight: 900;
+            letter-spacing: 8px;
+            color: #4ade80;
+            text-shadow: 0 0 20px rgba(74, 222, 128, 0.3);
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 20px;
+            font-family: 'Orbitron', sans-serif;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #22c55e;
+            border-radius: 20px;
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.2);
+        }
+        
+        .status-led {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        .status-led.green { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+        .status-led.yellow { background: #84cc16; box-shadow: 0 0 8px #84cc16; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Main grid layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        /* Telemetry cards */
+        .telemetry-section {
+            grid-column: span 12;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .prism-card {
+            background: linear-gradient(135deg, rgba(10, 14, 26, 0.95), rgba(15, 23, 42, 0.95));
+            border: 2px solid;
+            border-radius: 15px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+        
+        .prism-card.green {
+            border-color: #22c55e;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.2), inset 0 0 20px rgba(34, 197, 94, 0.05);
+        }
+        
+        .prism-card.yellow {
+            border-color: #84cc16;
+            box-shadow: 0 0 20px rgba(132, 204, 22, 0.2), inset 0 0 20px rgba(132, 204, 22, 0.05);
+        }
+        
+        .prism-card.red {
+            border-color: #16a34a;
+            box-shadow: 0 0 20px rgba(22, 163, 74, 0.3), inset 0 0 20px rgba(22, 163, 74, 0.1);
+            animation: cardPulse 1s ease-in-out infinite;
+        }
+        
+        @keyframes cardPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        
+        .prism-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            margin-bottom: 10px;
+            filter: drop-shadow(0 0 5px currentColor);
+            animation: iconFloat 3s ease-in-out infinite;
+        }
+        
+        .card-icon svg {
+            width: 100%;
+            height: 100%;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+        }
+        
+        @keyframes iconFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .card-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.7;
+            margin-bottom: 5px;
+        }
+        
+        .card-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 32px;
+            font-weight: 700;
+            line-height: 1;
+        }
+        
+        .card-unit {
+            font-size: 14px;
+            opacity: 0.6;
+            margin-left: 5px;
+        }
+        
+        /* Charts section */
+        .chart-section {
+            grid-column: span 8;
+            background: linear-gradient(135deg, rgba(10, 14, 26, 0.95), rgba(15, 23, 42, 0.95));
+            border: 2px solid #22c55e;
+            border-radius: 15px;
+            padding: 25px;
+            position: relative;
+            box-shadow: 0 0 30px rgba(34, 197, 94, 0.1);
+        }
+        
+        .chart-header {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: #4ade80;
+            text-shadow: 0 0 8px rgba(74, 222, 128, 0.3);
+        }
+        
+        .chart-container {
+            height: 300px;
+            position: relative;
+        }
+        
+        canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+        
+        /* 3D Actuator section */
+        .actuator-section {
+            grid-column: span 4;
+            background: linear-gradient(135deg, rgba(10, 14, 26, 0.95), rgba(15, 23, 42, 0.95));
+            border: 2px solid #16a34a;
+            border-radius: 15px;
+            padding: 25px;
+            position: relative;
+            box-shadow: 0 0 30px rgba(22, 163, 74, 0.1);
+        }
+        
+        .actuator-viz {
+            height: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .car-schematic {
+            width: 200px;
+            height: 150px;
+            position: relative;
+            animation: carHover 3s ease-in-out infinite;
+        }
+        
+        @keyframes carHover {
+            0%, 100% { transform: translateY(0) rotateY(0deg); }
+            50% { transform: translateY(-10px) rotateY(5deg); }
+        }
+        
+        .suspension-point {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            animation: suspensionPulse 2s ease-in-out infinite;
+        }
+        
+        .suspension-point.fl { top: 20px; left: 20px; background: #22c55e; box-shadow: 0 0 15px #22c55e; }
+        .suspension-point.fr { top: 20px; right: 20px; background: #22c55e; box-shadow: 0 0 15px #22c55e; }
+        .suspension-point.rl { bottom: 20px; left: 20px; background: #84cc16; box-shadow: 0 0 15px #84cc16; }
+        .suspension-point.rr { bottom: 20px; right: 20px; background: #84cc16; box-shadow: 0 0 15px #84cc16; }
+        
+        @keyframes suspensionPulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.7; }
+        }
+        
+        .car-body {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.5));
+            border: 2px solid #4ade80;
+            border-radius: 20px 20px 10px 10px;
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.2);
+            position: relative;
+        }
+        
+        .energy-arc {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+        
+        .arc-line {
+            position: absolute;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #4ade80, transparent);
+            animation: arcPulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes arcPulse {
+            0%, 100% { opacity: 0; transform: scaleX(0); }
+            50% { opacity: 0.6; transform: scaleX(1); }
+        }
+        
+        /* Fault panel */
+        .fault-section {
+            grid-column: span 12;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(20, 30, 48, 0.95));
+            border: 2px solid #16a34a;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 0 30px rgba(22, 163, 74, 0.1);
+        }
+        
+        .fault-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 10px;
+        }
+        
+        .fault-table th {
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #4ade80;
+            padding: 15px;
+            text-align: left;
+            font-size: 12px;
+        }
+        
+        .fault-table td {
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            border-top: 1px solid rgba(34, 197, 94, 0.2);
+            border-bottom: 1px solid rgba(34, 197, 94, 0.2);
+        }
+        
+        .fault-table tr td:first-child {
+            border-left: 1px solid rgba(34, 197, 94, 0.2);
+            border-radius: 10px 0 0 10px;
+        }
+        
+        .fault-table tr td:last-child {
+            border-right: 1px solid rgba(34, 197, 94, 0.2);
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .fault-warning {
+            display: inline-block;
+            padding: 5px 15px;
+            background: rgba(22, 163, 74, 0.2);
+            border: 1px solid #16a34a;
+            border-radius: 15px;
+            animation: warningPulse 1s ease-in-out infinite;
+        }
+        
+        @keyframes warningPulse {
+            0%, 100% { box-shadow: 0 0 8px rgba(22, 163, 74, 0.3); }
+            50% { box-shadow: 0 0 15px rgba(22, 163, 74, 0.5); }
+        }
+        
+        /* AI Prediction panel */
+        .ai-section {
+            grid-column: span 6;
+            background: linear-gradient(135deg, rgba(10, 14, 26, 0.95), rgba(15, 23, 42, 0.95));
+            border: 2px solid #059669;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 0 30px rgba(5, 150, 105, 0.1);
+        }
+        
+        .prediction-gauge {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+        
+        .gauge {
+            text-align: center;
+        }
+        
+        .gauge-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 5px solid;
+            position: relative;
+            margin: 0 auto 15px;
+            animation: gaugeRotate 4s linear infinite;
+        }
+        
+        @keyframes gaugeRotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .gauge-circle::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 80%;
+            height: 80%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(74, 222, 128, 0.1), transparent);
+        }
+        
+        .gauge-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        .gauge-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.7;
+        }
+        
+        /* Mini charts section */
+        .mini-charts {
+            grid-column: span 6;
+            display: grid;
+            grid-template-rows: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .mini-chart {
+            background: linear-gradient(135deg, rgba(10, 14, 26, 0.95), rgba(15, 23, 42, 0.95));
+            border: 2px solid #22c55e;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.1);
+        }
+        
+        .mini-chart-container {
+            height: 150px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Background effects -->
+    <div class="bg-grid"></div>
+    
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>HYPERCAR SUSPENSION TELEMETRY</h1>
+            <div class="status-bar">
+                <div class="status-item">
+                    <div class="status-led green"></div>
+                    <span>SYSTEM ONLINE</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-led yellow"></div>
+                    <span>ADAPTIVE MODE</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-led green"></div>
+                    <span>GRU ACTIVE</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Telemetry Prism Cards -->
+        <div class="dashboard-grid">
+            <div class="telemetry-section">
+                <div class="prism-card green" id="card1">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/>
+                        </svg>
+                    </div>
+                    <div class="card-label">Mean Error</div>
+                    <div class="card-value">2.3<span class="card-unit">mm</span></div>
+                </div>
+                <div class="prism-card green" id="card2">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M3 3v18h18"/>
+                            <polyline points="9 17 13 13 17 15 21 9"/>
+                        </svg>
+                    </div>
+                    <div class="card-label">RMS Error</div>
+                    <div class="card-value">3.8<span class="card-unit">mm</span></div>
+                </div>
+                <div class="prism-card yellow" id="card3">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                            <line x1="12" y1="9" x2="12" y2="13"/>
+                            <circle cx="12" cy="17" r="0.5"/>
+                        </svg>
+                    </div>
+                    <div class="card-label">Max Error</div>
+                    <div class="card-value">12.5<span class="card-unit">mm</span></div>
+                </div>
+                <div class="prism-card green" id="card4">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
+                        </svg>
+                    </div>
+                    <div class="card-label">Avg Torque</div>
+                    <div class="card-value">342<span class="card-unit">Nm</span></div>
+                </div>
+                <div class="prism-card red" id="card5">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M8 12h8"/>
+                            <path d="M12 8v8"/>
+                            <circle cx="12" cy="12" r="6"/>
+                        </svg>
+                    </div>
+                    <div class="card-label">Peak Torque</div>
+                    <div class="card-value">856<span class="card-unit">Nm</span></div>
+                </div>
+                <div class="prism-card green" id="card6">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                            <circle cx="12" cy="12" r="9"/>
+                        </svg>
+                    </div>
+                    <div class="card-label">Avg Current</div>
+                    <div class="card-value">18.2<span class="card-unit">A</span></div>
+                </div>
+                <div class="prism-card yellow" id="card7">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 8v4l3 3"/>
+                        </svg>
+                    </div>
+                    <div class="card-label">Fault Count</div>
+                    <div class="card-value">3<span class="card-unit"></span></div>
+                </div>
+                <div class="prism-card green" id="card8">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                    </div>
+                    <div class="card-label">System Health</div>
+                    <div class="card-value">94<span class="card-unit">%</span></div>
+                </div>
+            </div>
+            
+            <!-- Main Chart -->
+            <div class="chart-section">
+                <div class="chart-header">RIDE HEIGHT VS TARGET</div>
+                <div class="chart-container">
+                    <canvas id="rideHeightChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- 3D Actuator -->
+            <div class="actuator-section">
+                <div class="chart-header">3D ACTUATOR LIVE</div>
+                <div class="actuator-viz">
+                    <div class="car-schematic">
+                        <div class="car-body">
+                            <div class="suspension-point fl"></div>
+                            <div class="suspension-point fr"></div>
+                            <div class="suspension-point rl"></div>
+                            <div class="suspension-point rr"></div>
+                        </div>
+                        <div class="energy-arc">
+                            <div class="arc-line" style="width: 100%; top: 30%; animation-delay: 0s;"></div>
+                            <div class="arc-line" style="width: 100%; top: 50%; animation-delay: 0.5s;"></div>
+                            <div class="arc-line" style="width: 100%; top: 70%; animation-delay: 1s;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 30px; text-align: center;">
+                        <div style="font-size: 14px; opacity: 0.7;">VERTICAL LOAD</div>
+                        <div style="font-family: 'Orbitron', sans-serif; font-size: 28px; color: #22c55e;">2.8G</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- PWM Chart -->
+            <div class="chart-section">
+                <div class="chart-header">PWM SIGNAL OPTIMIZATION</div>
+                <div class="chart-container">
+                    <canvas id="pwmChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Error Chart -->
+            <div class="actuator-section">
+                <div class="chart-header">HEIGHT ERROR</div>
+                <div class="chart-container">
+                    <canvas id="errorChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Fault Panel -->
+            <div class="fault-section">
+                <div class="chart-header">FAULT LOG</div>
+                <table class="fault-table">
+                    <thead>
+                        <tr>
+                            <th>FAULT #</th>
+                            <th>TIMESTAMP</th>
+                            <th>CURRENT DELTA</th>
+                            <th>RIDE HEIGHT</th>
+                            <th>SEVERITY</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>#F-0127</td>
+                            <td>14:23:45.892</td>
+                            <td style="color: #16a34a;">+12.4A</td>
+                            <td>-8.2mm</td>
+                            <td><span class="fault-warning">HIGH</span></td>
+                        </tr>
+                        <tr>
+                            <td>#F-0126</td>
+                            <td>14:18:32.124</td>
+                            <td style="color: #84cc16;">+6.8A</td>
+                            <td>-4.1mm</td>
+                            <td><span class="fault-warning" style="border-color: #84cc16; background: rgba(132, 204, 22, 0.2);">MEDIUM</span></td>
+                        </tr>
+                        <tr>
+                            <td>#F-0125</td>
+                            <td>14:12:18.456</td>
+                            <td style="color: #16a34a;">+15.2A</td>
+                            <td>-11.5mm</td>
+                            <td><span class="fault-warning">HIGH</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- AI Prediction Panel -->
+            <div class="ai-section">
+                <div class="chart-header">PREDICTIVE AI ANALYTICS</div>
+                <div class="prediction-gauge">
+                    <div class="gauge">
+                        <div class="gauge-circle" style="border-color: #22c55e;">
+                            <div class="gauge-value" style="color: #22c55e;">92%</div>
+                        </div>
+                        <div class="gauge-label">COMFORT INDEX</div>
+                    </div>
+                    <div class="gauge">
+                        <div class="gauge-circle" style="border-color: #4ade80;">
+                            <div class="gauge-value" style="color: #4ade80;">88%</div>
+                        </div>
+                        <div class="gauge-label">STABILITY SCORE</div>
+                    </div>
+                    <div class="gauge">
+                        <div class="gauge-circle" style="border-color: #059669;">
+                            <div class="gauge-value" style="color: #059669;">96%</div>
+                        </div>
+                        <div class="gauge-label">GRU CONFIDENCE</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Mini Charts -->
+            <div class="mini-charts">
+                <div class="mini-chart">
+                    <div class="chart-header" style="font-size: 14px; margin-bottom: 10px;">TORQUE DISTRIBUTION</div>
+                    <div class="mini-chart-container">
+                        <canvas id="torqueChart"></canvas>
+                    </div>
+                </div>
+                <div class="mini-chart">
+                    <div class="chart-header" style="font-size: 14px; margin-bottom: 10px;">CURRENT DRAW</div>
+                    <div class="mini-chart-container">
+                        <canvas id="currentChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+	// -------- CONTROLLER STATE --------
+	let t = 0;
+	let actualHeight = 95;
+	const targetHeight = 100;
+
+	const rideData = [];
+	const pwmData = [];
+	const errorData = [];
+	
+	let prevError = 0;
+	let prevPWM = 128;
+
+	function gruStep(target, actual) {
+		const error = target - actual;
+
+		const deltaPWM =
+			0.4 * error +
+			0.3 * prevError +
+			0.3 * (prevPWM - 128);
+
+		prevError = error;
+		prevPWM = Math.max(90, Math.min(160, prevPWM + deltaPWM));
+
+		return { error, pwm: prevPWM };
+	}
+
+
+	// ---------------- GRU SURROGATE CORE ----------------
+	let prevError = 0;
+	let prevPWM = 128;
+	function gruStep(target, actual) {
+		const error = target - actual;
+
+		const deltaPWM =
+			0.4 * error +
+			0.3 * prevError +
+			0.3 * (prevPWM - 128);
+
+		prevError = error;
+		prevPWM = Math.max(90, Math.min(160, prevPWM + deltaPWM));
+
+		return { error, pwm: prevPWM };
+	}
+
+        // Chart configurations
+        const chartConfig = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#4ade80',
+                        font: { family: 'Rajdhani', size: 12 }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(34, 197, 94, 0.1)' },
+                    ticks: { color: '#4ade80', font: { family: 'Rajdhani' } }
+                },
+                y: {
+                    grid: { color: 'rgba(34, 197, 94, 0.1)' },
+                    ticks: { color: '#4ade80', font: { family: 'Rajdhani' } }
+                }
+            }
+        };
+        
+        // Generate time series data
+        const generateTimeData = (points, min, max) => {
+            return Array.from({ length: points }, (_, i) => ({
+                x: i,
+                y: Math.random() * (max - min) + min
+            }));
+        };
+        // -------- GRU GENERATED RIDE DATA --------
+		const rideData = [];
+		let actual = 95;
+		const target = 100;
+		for (let i = 0; i < 50; i++) {
+			const { error } = gruStep(target, actual);
+			actual += error * 0.1;
+			rideData.push({ x: i, y: actual });
+		}
+        // Ride Height Chart
+        const rideHeightChart = new Chart(document.getElementById('rideHeightChart'), {
+            type: 'line',
+            data: {
+                datasets: [
+                    {
+                        label: 'Actual Height',
+                        data: rideData,
+                        borderColor: '#4ade80',
+                        backgroundColor: 'rgba(74, 222, 128, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        fill: true
+                    },
+                    {
+                        label: 'Target Height',
+                        data: Array.from({ length: 50 }, (_, i) => ({ x: i, y: 100 })),
+                        borderColor: '#16a34a',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        tension: 0
+                    }
+                ]
+            },
+            options: chartConfig
+        });
+        
+        // PWM Chart
+        const pwmChart = new Chart(document.getElementById('pwmChart'), {
+            type: 'line',
+            data: {
+                datasets: [
+                    {
+                        label: 'Base PWM',
+						data: pwmData,
+                        borderColor: '#16a34a',
+                        backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        pointRadius: 0,
+                        fill: true
+                    },
+                    {
+                        label: 'GRU Incremental PWM',
+                        data: errorData,
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.3,
+                        pointRadius: 0,
+                        fill: true
+                    }
+                ]
+            },
+            options: chartConfig
+        });
+        
+        // Error Chart
+        const errorChart = new Chart(document.getElementById('errorChart'), {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: 'Height Error',
+                    data: rideData.map(p => ({
+					x: p.x,
+					y: p.y - target
+				})),
+                    borderColor: '#84cc16',
+                    backgroundColor: 'rgba(132, 204, 22, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    pointRadius: 2,
+                    pointBackgroundColor: '#84cc16',
+                    fill: true
+                }]
+            },
+            options: chartConfig
+        });
+        
+        // Torque Chart
+        new Chart(document.getElementById('torqueChart'), {
+            type: 'bar',
+            data: {
+                labels: ['FL', 'FR', 'RL', 'RR'],
+                datasets: [{
+                    label: 'Torque (Nm)',
+                    data: [342, 358, 328, 351],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.5)',
+                        'rgba(34, 197, 94, 0.5)',
+                        'rgba(22, 163, 74, 0.5)',
+                        'rgba(132, 204, 22, 0.5)'
+                    ],
+                    borderColor: [
+                        '#4ade80',
+                        '#22c55e',
+                        '#16a34a',
+                        '#84cc16'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                ...chartConfig,
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(34, 197, 94, 0.1)' },
+                        ticks: { color: '#4ade80', font: { family: 'Rajdhani', size: 14, weight: 'bold' } }
+                    },
+                    y: {
+                        grid: { color: 'rgba(34, 197, 94, 0.1)' },
+                        ticks: { color: '#4ade80', font: { family: 'Rajdhani' } },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+        
+        // Current Chart
+        new Chart(document.getElementById('currentChart'), {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: 'Current (A)',
+                    data: generateTimeData(30, 12, 25),
+                    borderColor: '#16a34a',
+                    backgroundColor: 'rgba(22, 163, 74, 0.2)',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#16a34a',
+                    fill: true
+                }]
+            },
+            options: chartConfig
+        });
+        
+        // Animate card values
+		setInterval(() => {
+			document.querySelector('#card1 .card-value').innerHTML =
+			Math.abs(prevError).toFixed(2) + '<span class="card-unit">mm</span>';
+			document.querySelector('#card6 .card-value').innerHTML =
+			(2 + Math.abs(prevPWM - 128) * 0.05).toFixed(2) + '<span class="card-unit">A</span>';
+			document.querySelector('#card8 .card-value').innerHTML =
+			Math.max(85, 100 - Math.abs(prevError)).toFixed(0) + '<span class="card-unit">%</span>';
+			}, 1000);
+
+            // Update card color based on severity
+            const label = randomCard.querySelector('.card-label').textContent;
+            if (label.includes('Max') || label.includes('Peak') || label.includes('Fault')) {
+                if (parseFloat(newValue) > 10) {
+                    randomCard.className = 'prism-card red';
+                } else if (parseFloat(newValue) > 5) {
+                    randomCard.className = 'prism-card yellow';
+                } else {
+                    randomCard.className = 'prism-card green';
+                }
+            }
+        }, 2000);
+		setInterval(() => {
+		const { error, pwm } = gruStep(targetHeight, actualHeight);
+
+		actualHeight += error * 0.08;
+
+		rideData.push({ x: t, y: actualHeight });
+		pwmData.push({ x: t, y: pwm });
+		errorData.push({ x: t, y: error });
+
+		if (rideData.length > 50) {
+			rideData.shift();
+			pwmData.shift();
+			errorData.shift();
+		}
+
+		rideHeightChart.update();
+		pwmChart.update();
+		errorChart.update();
+
+		t++;
+	}, 300);
+
+    </script>
+</body>
+</html>
