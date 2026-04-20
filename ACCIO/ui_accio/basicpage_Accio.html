@@ -1,0 +1,128 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Motor Control UI</title>
+</head>
+
+<body>
+
+<h2>Motor Control Panel</h2>
+
+<h3>Monitoring Data</h3>
+
+<b>Sensors Data</b><br>
+Voltage: <span id="voltage">0</span><br>
+Current: <span id="current">0</span><br>
+Temperature: <span id="temp">0</span><br>
+Limit Switch 1: <span id="ls1">0</span><br>
+Limit Switch 2: <span id="ls2">0</span><br><br>
+
+<b>Motor Data</b><br>
+Position: <span id="pos">0</span><br>
+Velocity: <span id="vel">0</span><br>
+Status: <span id="status">OFF</span><br><br>
+
+<button onclick="getStatus()">Refresh</button>
+
+<hr>
+
+<h3>Motor Jogging Control</h3>
+
+<button onclick="forward()">Forward</button>
+<button onclick="reverse()">Reverse</button>
+
+<br><br>
+Target Velocity:
+<input type="number" id="targetVel"><br><br>
+
+Target Position:
+<input type="number" id="targetPos"><br><br>
+
+<button onclick="sendTargets()">Set Targets</button>
+
+<hr>
+
+<h3>Digital Twin</h3>
+
+<div style="width:300px; height:50px; border:1px solid black; position:relative;">
+    <div id="motor" style="width:20px; height:50px; background:black; position:absolute; left:0;"></div>
+</div>
+
+<hr>
+
+<button onclick="enableMotor()">Enable</button>
+<button onclick="disableMotor()">Disable</button>
+
+<script>
+function getStatus() {
+    fetch('/api/status')
+    .then(res => res.json())
+    .then(data => {
+
+        document.getElementById("voltage").innerText = data.rail_voltage_V;
+        document.getElementById("current").innerText = data.current_A;
+        document.getElementById("temp").innerText = data.temperature_C;
+        document.getElementById("ls1").innerText = data.limit_sw1;
+        document.getElementById("ls2").innerText = data.limit_sw2;
+
+        document.getElementById("pos").innerText = data.position_pulses;
+        document.getElementById("vel").innerText = data.velocity_rpm;
+        document.getElementById("status").innerText = data.motor_enabled ? "ON" : "OFF";
+
+        // Digital twin
+        let pos = data.position_pulses;
+        document.getElementById("motor").style.left = (pos % 300) + "px";
+    });
+}
+
+function forward() {
+    fetch('/api/control', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ manual_duty: 150 })
+    });
+}
+
+function reverse() {
+    fetch('/api/control', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ manual_duty: -150 })
+    });
+}
+
+function sendTargets() {
+    let vel = document.getElementById("targetVel").value;
+    let pos = document.getElementById("targetPos").value;
+
+    fetch('/api/control', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            target_rpm: vel,
+            target_pos: pos,
+            mode_velocity: true
+        })
+    });
+}
+
+function enableMotor() {
+    fetch('/api/control', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ enabled: true })
+    });
+}
+
+function disableMotor() {
+    fetch('/api/control', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ enabled: false })
+    });
+}
+</script>
+
+</body>
+</html>
